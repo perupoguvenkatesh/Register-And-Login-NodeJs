@@ -92,13 +92,13 @@ app.get('/users-without-jwtToken',async (request, response) => {
       console.error('Error executing query:', error);
       return response.status(500).send('Internal Server Error');
     }
-    response.status(200).send(results)    
+    response.status(200).json(results)    
   });
 })
 //API 1
 app.get('/',(request, response) => {
   const myHomeData="It is the registration and Login API to get the list of users /register /login /users /change-pasword /delete-user /delete-all"
-  response.status(200).send({myHomeData})  
+  response.status(200).json({myHomeData})  
 })
 //API 2
 app.get('/users',authenticateToken, async (request, response) => {
@@ -128,11 +128,11 @@ app.post('/register', async (request, response) => {
     const dbUser = results[0];
     
     if (dbUser) {
-      return response.status(400).send('User already exists');
+      return response.status(400).json('User Already Exist');
     }
 
     if (!validataPassword(password)) {
-      return response.status(400).json('Password is too short');
+      return response.status(400).json('Password is too Short');
     }
 
     const createUserQuery = `
@@ -148,9 +148,9 @@ app.post('/register', async (request, response) => {
     connection.query(createUserQuery, (error, results) => {
       if (error) {
         console.error('Error executing query:', error);
-        return response.status(500).send('Internal Server Error');
+        return response.status(500).json('Internal Server Error');
       }
-      response.send('User created successfully');
+      response.json('User Created Successfully');
     });
   });
 });
@@ -166,12 +166,12 @@ app.post('/login', async (request, response) => {
   connection.query(selectUserQuery,(error, results) => {
     if (error) {
       console.error('Error executing query:', error);     
-      return response.status(500).send('Internal Server Error');
+      return response.status(500).json('Internal Server Error');
     }
     let dbUser = results[0]
  
     if (dbUser === undefined) {
-      return response.status(400).send('Invalid user')
+      return response.status(400).json('Invalid User')
     } 
     if(dbUser !== undefined) {
       const isPasswordMatched =bcrypt.compareSync(password, dbUser.password)
@@ -179,9 +179,9 @@ app.post('/login', async (request, response) => {
       if (isPasswordMatched) {
         const payload = { username: username }
         const jwtToken = jwt.sign(payload,"MY_SECRET_TOKEN")
-        return response.send({ jwtToken })
+        return response.json({ jwtToken })
       } else {
-        response.status(400).send('Invalid password')
+        response.status(400).json('Invalid Password')
       } 
     }
   })
@@ -199,11 +199,11 @@ app.put('/change-password',authenticateToken, async (request, response) => {
   connection.query(selectUserQuery, async (error, results) => {
     if (error) {
       console.error('Error executing query:', error);     
-      return response.status(500).send('Internal Server Error');
+      return response.status(500).json('Internal Server Error');
     }     
     let dbUser = results[0] 
     if (dbUser === undefined) {  
-      return response.status(400).send('Invalid user')
+      return response.status(400).json('Invalid user')
     }
     const isPasswordMatched = await bcrypt.compare(oldPassword, dbUser.password) 
     if (isPasswordMatched) {
@@ -219,15 +219,15 @@ app.put('/change-password',authenticateToken, async (request, response) => {
         connection.query(updateQuery, (error, results) => {
           if (error) {  
             console.error('Error executing query:', error);     
-            return response.status(500).jnson('Internal Server Error');
+            return response.status(500).json('Internal Server Error');
           }
           response.json('Password updated') 
         })
       } else {
-        return response.status(400).jsnon('Password is too short')
+        return response.status(400).json('Password is too sShort')
       }
     } else {
-      return response.status(400).json('Invalid current password')
+      return response.status(400).json('Invalid Current Password')
     }   
   })
 })
@@ -243,11 +243,11 @@ app.delete('/delete-user',authenticateToken, async (request, response) => {
   connection.query(selectUserQuery, (error, results) => {
     if (error) {
       console.error('Error executing query:', error);     
-      return response.status(500).send('Internal Server Error');
+      return response.status(500).json('Internal Server Error');
     }
     let dbUser = results[0]
     if (dbUser === undefined) {
-      return response.status(400).send('Invalid user')
+      return response.status(400).json('Invalid user')
     } 
     if(dbUser !== undefined) {
       const isPasswordMatched = bcrypt.compareSync(password, dbUser.password)
@@ -259,12 +259,12 @@ app.delete('/delete-user',authenticateToken, async (request, response) => {
         connection.query(deleteUserQuery, (error, results) => {
           if (error) {
             console.error('Error executing query:', error);
-            return response.status(500).send('Internal Server Error');
+            return response.status(500).json('Internal Server Error');
           }    
           response.json("User deleted");
         });
       } else {
-        return response.status(400).send('Invalid password')
+        return response.status(400).json('Invalid password')
       } 
     }
   })
@@ -282,11 +282,11 @@ app.delete('/delete-all',authenticateToken, async (request, response) => {
   connection.query(selectUserQuery, (error, results) => {
     if (error) {
       console.error('Error executing query:', error);     
-      return response.status(500).send('Internal Server Error');
+      return response.status(500).json('Internal Server Error');
     }
     let dbUser = results[0]
     if (dbUser === undefined) {
-      return response.status(400).send('Invalid user')
+      return response.status(400).json('Invalid user')
     } 
     if(dbUser !== undefined) {
       const isPasswordMatched = bcrypt.compareSync(password, dbUser.password)
@@ -298,12 +298,12 @@ app.delete('/delete-all',authenticateToken, async (request, response) => {
         connection.query(deleteUserQuery, (error, results) => {
           if (error) {
             console.error('Error executing query:', error);
-            return response.status(500).send('Internal Server Error');
+            return response.status(500).json('Internal Server Error');
           }    
           response.json("All deleted");
         });
       } else {
-        response.status(400).send('Invalid password')
+        response.status(400).json('Invalid password')
       } 
     }
   })
