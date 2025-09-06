@@ -1,36 +1,67 @@
 const express = require('express')
-const cors = require('cors')
-const {open} = require('sqlite')
-const sqlite3 = require('sqlite3')
-const path = require('path')
+const mysql = require('mysql2')
 const bcrypt = require('bcrypt')
+const path = require('path')
+// const {open} = require('sqlite')
+// const sqlite3 = require('sqlite3')
 const jwt = require('jsonwebtoken')
-
-const databasePath = path.join(__dirname, 'userData.db')
-
-const app = express()
+const cors = require('cors')
+const { sensitiveHeaders } = require('http2')
+// let dbpath = path.join(__dirname, 'practice.db')
+let app = express()
+app.use(
+  cors({      
+    origin: "*",
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    // optionsSuccessStatus: 200 
+          
+  })
+)
 app.use(express.json())
-app.use(cors())
+app.listen(3000, () => {
+      console.log('server running at http://localhost:3000/')
+})
+// let db = null
+// let intializeDbAndServer = async () => {
+//   try {
+//     db = await open({
+//       filename: dbpath,
+//       driver: sqlite3.Database,
+//     })
+//     app.listen(3000, () => {
+//       console.log('server running at http://localhost:3000/')
+//     })
+//   } catch (e) {
+//     console.log(`DB Error ${e.message}`)
+//     process.exit(1)
+//   }
+// }
+// intializeDbAndServer()
+const connection =mysql.createConnection({
+  host: 'sql12.freesqldatabase.com',
+  user: 'sql12797366',
+  password: 'dszh8STYHa',
+  database: 'sql12797366'
+})
+// const connection =mysql.createConnection({
+//   host: 'localhost',
+//   user: 'root',
+//   password: '#Developer1234dev',
+//   database: 'usersData'
+// })
 
-let database = null
-
-const initializeDbAndServer = async () => {
-  try {
-    database = await open({
-      filename: databasePath,
-      driver: sqlite3.Database,
-    })
-
-    app.listen(3000, () =>
-      console.log('Server Running at http://localhost:3000/'),
-    )
-  } catch (error) {
-    console.log(`DB Error: ${error.message}`)
-    process.exit(1)
+connection.connect(error => {
+  if (error){
+    console.log("Error connecting to the database:", error);
+    return;
   }
+  console.log("Successfully connected to the database.");
+});
+const validataPassword = password => {
+  return password.length > 4
 }
-
-initializeDbAndServer()
 function authenticateToken(request, response, next) {
   let jwtToken
   const authHeader = request.headers['authorization']
@@ -38,89 +69,246 @@ function authenticateToken(request, response, next) {
     jwtToken = authHeader.split(' ')[1]
   }
   if (jwtToken === undefined) {
-    response.status(401)
-    response.send('Invalid JWT Token')
-  } else {
+    return response.status(401).send('Invalid JWT Token')
+  } 
+  else {
     jwt.verify(jwtToken, 'MY_SECRET_TOKEN', async (error, payload) => {
       if (error) {
-        response.status(401)
-        response.send('Invalid JWT Token')
-      } else {
+        return response.status(401).send('Invalid JWT Token')
+      } 
+      else {
         next()
       }
     })
   }
 }
-//API 1
-const validataPassword = password => {
-  return password.length > 4
-}
-app.get('/amma', (request, response) => {
-  response.send('It is working...')
-})
-app.post('/register/', async (request, response) => {
-  const {username, name, password, gender, location} = request.body
-  const hashedPassword = await bcrypt.hash(request.body.password, 10)
-  const selectUserQuery = `
-    SELECT
-    * 
-    FROM
-      user
-    WHERE username="${username}";`
-  let dbUser = await database.get(selectUserQuery)
-  if (dbUser === undefined) {
-    const createUserQuery = `
-    INSERT INTO user(username,name,password,gender,location)
-    values(
-      "${username}",
-      "${name}",
-      "${hashedPassword}",
-      "${gender}",
-      "${location}"
-    );`
-    if (validataPassword(password)) {
-      await database.run(createUserQuery)
-      response.send('User created successfully')
-    } else {
-      response.status(400)
-      response.send('Password is too short')
+//API 0
+app.get('/users-without-jwtToken',async (request, response) => {
+  const getUsersQuery = `
+    SELECT * FROM users
+  ;`;
+   connection.query(getUsersQuery, (error, results) => {
+    if(error) {
+      console.error('Error executing query:', error);
+      return response.status(500).send('Internal Server Error');
     }
-  } else {
-    response.status(400)
-    response.send('User already exists')
-  }
+    response.status(200).send(results)    
+  });
 })
-app.post('/login/', async (request, response) => {
+//API 1
+app.get('/',(request, response) => {
+  const myHomeData="It is the registration and Login API to get the list of users /register /login /users /change-pasword /delete-user /delete-all"
+  response.status(200).send({myHomeData})  
+})
+//API 2
+app.get('/users',authenticateToken, async (request, response) => {
+  const getUsersQuery = `
+    SELECT * FROM users
+  ;`;
+  connection.query(getUsersQuery, (error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);
+      return response.status(500).send('Internal Server Error');
+    }       
+    response.json(results);
+  });
+})
+//API 3
+app.post('/register', async (request, response) => {
+  const { username, name, password, gender, location } = request.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const selectUserQuery = `
+    SELECT * FROM users WHERE username = "${username}";
+  `;
+  connection.query(selectUserQuery, (error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);
+      return response.status(500).send('Internal Server Error');
+    }
+    const dbUser = results[0];
+    
+    if (dbUser) {
+      return response.status(400).send('User already exists');
+    }
+
+    if (!validataPassword(password)) {
+      return response.status(400).json('Password is too short');
+    }
+
+    const createUserQuery = `
+      INSERT INTO users(username, name, password, gender, location)
+      VALUES (
+        "${username}",
+        "${name}",
+        "${hashedPassword}",
+        "${gender}",
+        "${location}"
+      );
+    `;
+    connection.query(createUserQuery, (error, results) => {
+      if (error) {
+        console.error('Error executing query:', error);
+        return response.status(500).send('Internal Server Error');
+      }
+      response.send('User created successfully');
+    });
+  });
+});
+//API 4
+app.post('/login', async (request, response) => {
   const {username, password} = request.body
   const selectUserQuery = `
-    select
-    *
-    from
-      User
-    where 
-    username='${username}'
-    `
-  const databaseUser = await database.get(selectUserQuery)
-  if (databaseUser === undefined) {
-    response.status(400)
-    response.send('Invalid user')
-  } else {
-    const isValidPassword = await bcrypt.compare(
-      password,
-      databaseUser.password,
-    )
-    if (isValidPassword === true) {
-      const payload = {
-        username: username,
-      }
-      const jwtToken = jwt.sign(payload, 'MY_SECRET_TOKEN')
-      response.send({jwtToken})
-    } else {
-      response.status(400)
-      response.send('Invalid password')
+    SELECT * 
+    FROM
+    users
+    WHERE
+      username="${username}";`
+  connection.query(selectUserQuery,(error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);     
+      return response.status(500).send('Internal Server Error');
     }
-  }
+    let dbUser = results[0]
+ 
+    if (dbUser === undefined) {
+      return response.status(400).send('Invalid user')
+    } 
+    if(dbUser !== undefined) {
+      const isPasswordMatched =bcrypt.compareSync(password, dbUser.password)
+  
+      if (isPasswordMatched) {
+        const payload = { username: username }
+        const jwtToken = jwt.sign(payload,"MY_SECRET_TOKEN")
+        return response.send({ jwtToken })
+      } else {
+        response.status(400).send('Invalid password')
+      } 
+    }
+  })
 })
-//API2
+//API 5
+app.put('/change-password',authenticateToken, async (request, response) => {
+  const {username, oldPassword, newPassword} = request.body
 
+  const selectUserQuery = `
+    SELECT * 
+    FROM
+    users
+    WHERE
+      username="${username}";`
+  connection.query(selectUserQuery, async (error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);     
+      return response.status(500).send('Internal Server Error');
+    }     
+    let dbUser = results[0] 
+    if (dbUser === undefined) {  
+      return response.status(400).send('Invalid user')
+    }
+    const isPasswordMatched = await bcrypt.compare(oldPassword, dbUser.password) 
+    if (isPasswordMatched) {
+      if (validataPassword(newPassword)) {
+        let hashedPassword = await bcrypt.hash(newPassword, 10) 
+        const updateQuery = `
+        UPDATE
+        users
+        SET
+          password="${hashedPassword}"
+        WHERE
+          username="${username}";`
+        connection.query(updateQuery, (error, results) => {
+          if (error) {  
+            console.error('Error executing query:', error);     
+            return response.status(500).jnson('Internal Server Error');
+          }
+          response.json('Password updated') 
+        })
+      } else {
+        return response.status(400).jsnon('Password is too short')
+      }
+    } else {
+      return response.status(400).json('Invalid current password')
+    }   
+  })
+})
+//API 6
+app.delete('/delete-user',authenticateToken, async (request, response) => {
+  const {username, password} = request.body
+  const selectUserQuery = `
+    SELECT * 
+    FROM
+    users
+    WHERE
+      username="${username}";`
+  connection.query(selectUserQuery, (error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);     
+      return response.status(500).send('Internal Server Error');
+    }
+    let dbUser = results[0]
+    if (dbUser === undefined) {
+      return response.status(400).send('Invalid user')
+    } 
+    if(dbUser !== undefined) {
+      const isPasswordMatched = bcrypt.compareSync(password, dbUser.password)
+      console.log(isPasswordMatched)
+      if (isPasswordMatched) {
+        const deleteUserQuery = `
+        DELETE FROM users
+        WHERE username = "${username}" AND password = "${dbUser.password}";`;
+        connection.query(deleteUserQuery, (error, results) => {
+          if (error) {
+            console.error('Error executing query:', error);
+            return response.status(500).send('Internal Server Error');
+          }    
+          response.json("User deleted");
+        });
+      } else {
+        return response.status(400).send('Invalid password')
+      } 
+    }
+  })
+})
+//API 7
+//$2b$10$wu/8RRNWzkdjNAlTEcyRyeHxZRAsTbz3YY7pQWJ8IqTb/4IBKgktK
+app.delete('/delete-all',authenticateToken, async (request, response) => {
+  const {username, password} = request.body
+  const selectUserQuery = `
+    SELECT * 
+    FROM
+    users
+    WHERE
+      username="${username}";`
+  connection.query(selectUserQuery, (error, results) => {
+    if (error) {
+      console.error('Error executing query:', error);     
+      return response.status(500).send('Internal Server Error');
+    }
+    let dbUser = results[0]
+    if (dbUser === undefined) {
+      return response.status(400).send('Invalid user')
+    } 
+    if(dbUser !== undefined) {
+      const isPasswordMatched = bcrypt.compareSync(password, dbUser.password)
+      
+      if (isPasswordMatched) {
+        const deleteUserQuery = `
+        DELETE FROM users;
+        ;`;
+        connection.query(deleteUserQuery, (error, results) => {
+          if (error) {
+            console.error('Error executing query:', error);
+            return response.status(500).send('Internal Server Error');
+          }    
+          response.json("All deleted");
+        });
+      } else {
+        response.status(400).send('Invalid password')
+      } 
+    }
+  })
+})
+// SET SQL_SAFE_UPDATES = 0;
+// DELETE FROM users;
+// SET SQL_SAFE_UPDATES = 1;
 module.exports = app
