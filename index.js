@@ -232,7 +232,7 @@ app.put('/change-password',authenticateToken, async (request, response) => {
   })
 })
 //API 6
-app.delete('/delete-user',authenticateToken, async (request, response) => {
+app.delete('/delete-user',authenticateToken,async (request, response) => {
   const {username, password} = request.body
   const selectUserQuery = `
     SELECT * 
@@ -272,40 +272,16 @@ app.delete('/delete-user',authenticateToken, async (request, response) => {
 //API 7
 //$2b$10$wu/8RRNWzkdjNAlTEcyRyeHxZRAsTbz3YY7pQWJ8IqTb/4IBKgktK
 app.delete('/delete-all',authenticateToken, async (request, response) => {
-  const {username, password} = request.body
-  const selectUserQuery = `
-    SELECT * 
-    FROM
-    users
-    WHERE
-      username="${username}";`
-  connection.query(selectUserQuery, (error, results) => {
+  // const {username, password} = request.body
+  const deleteUserQuery = `
+        DELETE FROM users;
+        ;`;
+  connection.query(deleteUserQuery, (error, results) => {
     if (error) {
       console.error('Error executing query:', error);     
       return response.status(500).json('Internal Server Error');
     }
-    let dbUser = results[0]
-    if (dbUser === undefined) {
-      return response.status(400).json('Invalid user')
-    } 
-    if(dbUser !== undefined) {
-      const isPasswordMatched = bcrypt.compareSync(password, dbUser.password)
-      
-      if (isPasswordMatched) {
-        const deleteUserQuery = `
-        DELETE FROM users;
-        ;`;
-        connection.query(deleteUserQuery, (error, results) => {
-          if (error) {
-            console.error('Error executing query:', error);
-            return response.status(500).json('Internal Server Error');
-          }    
-          response.json("All deleted");
-        });
-      } else {
-        response.status(400).json('Invalid password')
-      } 
-    }
+    return response.status(200).json("All Deleted")
   })
 })
 // SET SQL_SAFE_UPDATES = 0;
