@@ -132,7 +132,7 @@ app.post('/register', async (request, response) => {
     }
 
     if (!validataPassword(password)) {
-      return response.status(400).json('Password is too Short');
+      return response.status(401).json('Password is too Short');
     }
 
     const createUserQuery = `
@@ -150,7 +150,7 @@ app.post('/register', async (request, response) => {
         console.error('Error executing query:', error);
         return response.status(500).json('Internal Server Error');
       }
-      response.json('User Created Successfully');
+      return response.status(201).json('User Created Successfully');
     });
   });
 });
@@ -171,7 +171,7 @@ app.post('/login', async (request, response) => {
     let dbUser = results[0]
  
     if (dbUser === undefined) {
-      return response.status(400).json('Invalid User')
+      return response.status(404).json('Invalid User')
     } 
     if(dbUser !== undefined) {
       const isPasswordMatched =bcrypt.compareSync(password, dbUser.password)
@@ -181,7 +181,7 @@ app.post('/login', async (request, response) => {
         const jwtToken = jwt.sign(payload,"MY_SECRET_TOKEN")
         return response.json({ jwtToken })
       } else {
-        response.status(400).json('Invalid Password')
+        response.status(401).json('Invalid Password')
       } 
     }
   })
@@ -203,7 +203,7 @@ app.put('/change-password',authenticateToken, async (request, response) => {
     }     
     let dbUser = results[0] 
     if (dbUser === undefined) {  
-      return response.status(400).json('Invalid user')
+      return response.status(404).json('Invalid user')
     }
     const isPasswordMatched = await bcrypt.compare(oldPassword, dbUser.password) 
     if (isPasswordMatched) {
@@ -221,13 +221,13 @@ app.put('/change-password',authenticateToken, async (request, response) => {
             console.error('Error executing query:', error);     
             return response.status(500).json('Internal Server Error');
           }
-          response.json('Password updated') 
+          return response.status(200).json('Password updated') 
         })
       } else {
-        return response.status(400).json('Password is too sShort')
+        return response.status(401).json('Password is too sShort')
       }
     } else {
-      return response.status(400).json('Invalid Current Password')
+      return response.status(401).json('Invalid Current Password')
     }   
   })
 })
