@@ -97,7 +97,7 @@ app.get('/users-without-jwtToken',async (request, response) => {
 })
 //API 1
 app.get('/',(request, response) => {
-  const myHomeData="It is the registration and Login API to get the list of users /register /login /users /change-pasword /delete-user /delete-all"
+  const myHomeData="It is the registration and Login API to get the list of users /register /login /users /change-pasword /delete-user /delete-all.Updatation on 6/9/2025."
   response.status(200).json({myHomeData})  
 })
 //API 2
@@ -123,7 +123,7 @@ app.post('/register', async (request, response) => {
   connection.query(selectUserQuery, (error, results) => {
     if (error) {
       console.error('Error executing query:', error);
-      return response.status(500).send('Internal Server Error');
+      return response.status(500).json('Internal Server Error');
     }
     const dbUser = results[0];
     
