@@ -271,7 +271,7 @@ app.delete('/delete-user',authenticateToken,async (request, response) => {
 })
 //API 7
 //$2b$10$wu/8RRNWzkdjNAlTEcyRyeHxZRAsTbz3YY7pQWJ8IqTb/4IBKgktK
-app.delete('/delete-all',authenticateToken, async (request, response) => {
+app.delete('/delete-all', async (request, response) => {
   // const {username, password} = request.body
   const deleteUserQuery = `
         DELETE FROM users;
