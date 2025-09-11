@@ -97,7 +97,7 @@ app.get('/users-without-jwtToken',async (request, response) => {
 })
 //API 1
 app.get('/',(request, response) => {
-  const myHomeData="It is the registration and Login API to get the list of users /register /login /users /change-pasword /delete-user /delete-all.Updatation on 6/9/2025."
+  const myHomeData="It is the registration and Login API to get the list of users.Including with API are /users-without-jwtToken /register /login /users /change-pasword /delete-user /delete-all.Updatation on 6/9/2025."
   response.status(200).json({myHomeData})  
 })
 //API 2
